@@ -27,7 +27,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: Install Chromium system dependencies
+      - name: Install system dependencies for camoufox
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -36,19 +36,15 @@ jobs:
             libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
             libxshmfence1 xvfb
 
-      - name: Install Playwright Chromium browser
-        run: playwright install chromium
+      - name: Download camoufox browser
+        run: python -m camoufox fetch
 
       - name: Run monitor
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
-          DISPLAY: ':99'
-        run: |
-          Xvfb :99 -screen 0 1280x800x24 &
-          sleep 1
-          python hyatt_monitor.py
+        run: python hyatt_monitor.py
 
       - name: Upload debug screenshot
         if: always()

@@ -14,7 +14,7 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from playwright.async_api import async_playwright
+from camoufox.async_api import AsyncCamoufox
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -54,34 +54,16 @@ async def scrape_rates() -> dict | None:
     """
     captured: list[dict] = []
 
-    async with async_playwright() as pw:
-        browser = await pw.chromium.launch(
-            headless=False,
-            args=[
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-blink-features=AutomationControlled",
-                "--disable-infobars",
-                "--window-size=1280,800",
-            ],
-        )
-        context = await browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/124.0.0.0 Safari/537.36"
-            ),
-            viewport={"width": 1280, "height": 800},
-            locale="en-US",
-            timezone_id="America/Chicago",
-        )
-
-        # Mask the automation flag that Akamai checks
-        await context.add_init_script(
-            "Object.defineProperty(navigator, 'webdriver', { get: () => undefined });"
-        )
-
-        page = await context.new_page()
+    async with AsyncCamoufox(
+        headless=False,
+        virtual_display=True,  # manages its own Xvfb
+        humanize=True,          # adds realistic mouse/timing behavior
+        os="mac",               # spoof macOS fingerprint
+        locale="en-US",
+        timezone="America/Chicago",
+        viewport={"width": 1280, "height": 800},
+    ) as browser:
+        page = await browser.new_page()
 
         # Capture any XHR/fetch response that returns JSON
         async def on_response(response):
@@ -114,7 +96,6 @@ async def scrape_rates() -> dict | None:
         # --- Attempt 1: XHR/fetch interception ---
         api_result = _parse_api_captures(captured)
         if api_result:
-            await browser.close()
             return {
                 "source": "api",
                 "endpoint": api_result["url"],
@@ -125,7 +106,6 @@ async def scrape_rates() -> dict | None:
         # --- Attempt 2: DOM text extraction ---
         print("  No API JSON captured — falling back to DOM extraction.")
         dom_result = await _extract_dom(page)
-        await browser.close()
 
         if dom_result:
             return {
