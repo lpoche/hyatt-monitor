@@ -59,7 +59,6 @@ async def scrape_rates() -> dict | None:
         humanize=True,   # adds realistic mouse/timing behavior
         os="macos",      # spoof macOS fingerprint
         locale="en-US",
-        timezone="America/Chicago",
         viewport={"width": 1280, "height": 800},
     ) as browser:
         page = await browser.new_page()
