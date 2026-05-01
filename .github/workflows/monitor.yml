@@ -1,0 +1,61 @@
+name: Hyatt Rate Monitor
+
+on:
+  schedule:
+    # 9:00 AM Central Standard Time daily (CST = UTC-6 in February)
+    - cron: '0 15 * * *'
+  workflow_dispatch: # allow manual trigger from the GitHub Actions UI
+
+permissions:
+  contents: write # needed to commit the updated rates JSON back to the repo
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright + Chromium
+        run: playwright install chromium --with-deps
+
+      - name: Install Xvfb (virtual display for headless=False)
+        run: sudo apt-get install -y xvfb
+
+      - name: Run monitor
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          EMAIL_RECIPIENTS: ${{ secrets.EMAIL_RECIPIENTS }}
+          DISPLAY: ':99'
+        run: |
+          Xvfb :99 -screen 0 1280x800x24 &
+          sleep 1
+          python hyatt_monitor.py
+
+      - name: Upload debug screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshot-${{ github.run_number }}
+          path: debug_screenshot.png
+          retention-days: 14
+
+      - name: Commit updated rates snapshot
+        run: |
+          git config user.name "hyatt-monitor[bot]"
+          git config user.email "hyatt-monitor[bot]@users.noreply.github.com"
+          git add last_known_rates.json
+          git diff --staged --quiet || git commit -m "chore: update rate snapshot [skip ci]"
+          git push
