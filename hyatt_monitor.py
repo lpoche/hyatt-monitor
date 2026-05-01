@@ -55,10 +55,9 @@ async def scrape_rates() -> dict | None:
     captured: list[dict] = []
 
     async with AsyncCamoufox(
-        headless=False,
-        virtual_display=True,  # manages its own Xvfb
-        humanize=True,          # adds realistic mouse/timing behavior
-        os="mac",               # spoof macOS fingerprint
+        headless=True,   # camoufox patches headless fingerprints internally
+        humanize=True,   # adds realistic mouse/timing behavior
+        os="mac",        # spoof macOS fingerprint
         locale="en-US",
         timezone="America/Chicago",
         viewport={"width": 1280, "height": 800},
