@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   monitor:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
 
     steps:
@@ -27,8 +27,11 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: Install Playwright + Chromium
-        run: playwright install chromium --with-deps
+      - name: Install Playwright system dependencies
+        run: playwright install-deps chromium
+
+      - name: Install Playwright Chromium browser
+        run: playwright install chromium
 
       - name: Install Xvfb (virtual display for headless=False)
         run: sudo apt-get install -y xvfb
